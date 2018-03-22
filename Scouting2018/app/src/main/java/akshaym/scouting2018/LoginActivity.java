@@ -22,6 +22,7 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.google.android.gms.auth.GoogleAuthUtil;
 import com.google.android.gms.auth.api.signin.GoogleSignIn;
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
 import com.google.android.gms.auth.api.signin.GoogleSignInClient;
@@ -64,20 +65,25 @@ public class LoginActivity extends AppCompatActivity implements
 
     public static Context context;
 
+    GoogleSignInAccount currentAccount = null;
+
     private String studentID;
 
     private GoogleSignInClient mGoogleSignInClient;
     private TextView mStatusTextView;
 
+    public static String email = "";
+
     static Task<GoogleSignInAccount> completedTask;
+    //static Intent data;
 
     protected AlertDialog alertDialog;
 
     static String currentRound;
 
-    private Tournament currentTournament;
+    static Tournament currentTournament;
 
-    private Scouting currentScouting;
+     static Scouting currentScouting;
 
     EditText input;
 
@@ -101,9 +107,10 @@ public class LoginActivity extends AppCompatActivity implements
         // Configure sign-in to request the user's ID, email address, and basic
         // profile. ID and basic profile are included in DEFAULT_SIGN_IN.
         GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                .requestIdToken(getString(R.string.server_client_id))
+                .requestServerAuthCode(getString(R.string.server_client_id))
                 .requestEmail()
                 .build();
+        //Toast.makeText(this, getString(R.string.server_client_id), Toast.LENGTH_SHORT).show();
         // [END configure_signin]
 
         // [START build_client]
@@ -112,8 +119,14 @@ public class LoginActivity extends AppCompatActivity implements
         // [END build_client]
 
 
-        GoogleSignInAccount account = GoogleSignIn.getLastSignedInAccount(this);
-        updateUI(account);
+        currentAccount = GoogleSignIn.getLastSignedInAccount(this);
+        updateUI(currentAccount);
+        if(currentAccount!=null){
+            Log.d(TAG, "current account recognized");
+            new AsyncGet().execute();
+        }else{
+            Log.d(TAG, "no current acct");
+        }
 
         // [START customize_button]
         // Set the dimensions of the sign-in button.
@@ -144,8 +157,7 @@ public class LoginActivity extends AppCompatActivity implements
         if (requestCode == RC_SIGN_IN) {
             // The Task returned from this call is always completed, no need to attach
             // a listener.
-            Task<GoogleSignInAccount> task = GoogleSignIn.getSignedInAccountFromIntent(data);
-            completedTask = task;
+            completedTask = GoogleSignIn.getSignedInAccountFromIntent(data);
             new AsyncGet().execute();
             //handleSignInResult(task);
         }
@@ -238,15 +250,17 @@ public class LoginActivity extends AppCompatActivity implements
 
             findViewById(R.id.sign_in_button).setVisibility(View.GONE);
             findViewById(R.id.sign_out_and_disconnect).setVisibility(View.VISIBLE);
+            findViewById(R.id.button_request_spot).setVisibility(View.VISIBLE);
         } else {
-            Toast.makeText(this, "it's still null", Toast.LENGTH_SHORT).show();
+            //Toast.makeText(this, "it's still null", Toast.LENGTH_SHORT).show();
             mStatusTextView.setText(R.string.signed_out);
 
             findViewById(R.id.sign_in_button).setVisibility(View.VISIBLE);
             findViewById(R.id.sign_out_and_disconnect).setVisibility(View.GONE);
+            findViewById(R.id.button_request_spot).setVisibility(View.INVISIBLE);
         }
     }
-/*
+
     private void requestSpot(){
         input = new EditText(this);
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
@@ -259,7 +273,10 @@ public class LoginActivity extends AppCompatActivity implements
         builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int id) {
                 dialog.dismiss();
-                requestSpotWithRound(input.getText().toString());
+                currentRound = input.getText().toString();
+                Toast.makeText(LoginActivity.this, currentRound, Toast.LENGTH_SHORT).show();
+                new AsyncRequestRound().execute();
+                //requestSpotWithRound(input.getText().toString());
             }
         });
         builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
@@ -270,7 +287,7 @@ public class LoginActivity extends AppCompatActivity implements
         alertDialog = builder.create();
         alertDialog.show();
     }
-
+/*
     private void requestSpotWithRound(String round){
         HttpClient httpClient = new DefaultHttpClient();
         HttpGet httpGet = new HttpGet("https://robotics.harker.org/member/scouting/request/"+round);
@@ -314,7 +331,7 @@ public class LoginActivity extends AppCompatActivity implements
     public void onClick(View v) {
         switch (v.getId()) {
             case R.id.sign_in_button:
-                Toast.makeText(this, "ur signed in", Toast.LENGTH_SHORT).show();
+                //Toast.makeText(this, "ur signed in", Toast.LENGTH_SHORT).show();
                 signIn();
                 break;
             case R.id.sign_out_button:
@@ -324,15 +341,14 @@ public class LoginActivity extends AppCompatActivity implements
                 revokeAccess();
                 break;
             case R.id.button_request_spot:
-                //requestSpot();
-                new AsyncRequest().execute();
+                requestSpot();
+                //new AsyncRequest().execute();
         }
     }
     private class AsyncGet extends AsyncTask<Void, Void, Void>
     {
         ProgressDialog pdLoading = new ProgressDialog(LoginActivity.context);
-
-        Task<GoogleSignInAccount> completedTask;
+        GoogleSignInAccount account;
 
         @Override
         protected void onPreExecute() {
@@ -341,31 +357,38 @@ public class LoginActivity extends AppCompatActivity implements
             pdLoading.setMessage("\tLoading...");
             pdLoading.setCancelable(false);
             pdLoading.setCanceledOnTouchOutside(false);
-            completedTask = LoginActivity.completedTask;
             pdLoading.show();
         }
 
         protected Void doInBackground(Void... params) {
             Looper.prepare();
-            Toast.makeText(LoginActivity.context, "in handle sign in", Toast.LENGTH_SHORT).show();
-            GoogleSignInAccount account = completedTask.getResult();
-
+            if(currentAccount==null) {
+               // Toast.makeText(LoginActivity.context, "in handle sign in", Toast.LENGTH_SHORT).show();
+                account = completedTask.getResult();
+            }else{
+                account = currentAccount;
+            }
             String idToken = account.getIdToken();
-            ((TextView) findViewById(R.id.status)).setText(("Welcome, "+account.getDisplayName()+"!"));
+            System.out.println(idToken);
+            Toast.makeText(LoginActivity.context, "Welcome, "+account.getDisplayName()+"!", Toast.LENGTH_SHORT).show();
 
             studentID = account.getEmail().substring(0, account.getEmail().indexOf("@"));
+            email = account.getEmail();
+            System.out.println(studentID);
 
-            Toast.makeText(LoginActivity.context, "Welcome, "+studentID+"!", Toast.LENGTH_SHORT ).show();
+            //Toast.makeText(LoginActivity.context, "Welcome, "+studentID+"!", Toast.LENGTH_SHORT ).show();
 
-            updateUI(account);
 
             HttpClient httpClient = new DefaultHttpClient();
             HttpPost httpPost = new HttpPost("https://robotics.harker.org/member/token");
 
             try {
                 List nameValuePairs = new ArrayList(1);
-                nameValuePairs.add(new BasicNameValuePair("idToken", idToken));
+                nameValuePairs.add(new BasicNameValuePair("android", "true"));
+                nameValuePairs.add(new BasicNameValuePair("idtoken", idToken));
+                System.out.println(nameValuePairs);
                 httpPost.setEntity(new UrlEncodedFormEntity(nameValuePairs));
+                System.out.println(httpPost.getEntity().toString());
 
                 HttpResponse response = httpClient.execute(httpPost);
                 int statusCode = response.getStatusLine().getStatusCode();
@@ -378,7 +401,7 @@ public class LoginActivity extends AppCompatActivity implements
                 Log.e(TAG, "Error sending ID token to backend.", e);
             }
             // Signed in successfully, show authenticated UI.
-            updateUI(account);
+            //updateUI(account);
             /*
             // The ApiException status code indicates the detailed failure reason.
             // Please refer to the GoogleSignInStatusCodes class reference for more information.
@@ -392,68 +415,8 @@ public class LoginActivity extends AppCompatActivity implements
         @Override
         protected void onPostExecute(Void result) {
             super.onPostExecute(result);
-
+            updateUI(account);
             pdLoading.dismiss();
-
-        }
-
-    }
-
-    private class AsyncRequest extends AsyncTask<Void, Void, Void>
-    {
-        ProgressDialog pdLoading = new ProgressDialog(LoginActivity.context);
-
-        Task<GoogleSignInAccount> completedTask;
-
-        String round;
-
-        @Override
-        protected void onPreExecute() {
-            super.onPreExecute();
-            //this method will be running on UI thread
-            pdLoading.setMessage("\tLoading...");
-            pdLoading.setCancelable(false);
-            pdLoading.setCanceledOnTouchOutside(false);
-            //completedTask = LoginActivity.completedTask;
-            pdLoading.show();
-        }
-
-        protected Void doInBackground(Void... params) {
-            Looper.prepare();
-            input = new EditText(LoginActivity.context);
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    LinearLayout.LayoutParams.MATCH_PARENT);
-            input.setLayoutParams(lp);
-            AlertDialog.Builder builder = new AlertDialog.Builder(LoginActivity.context);
-            builder.setTitle("Add round number")
-                    .setView(input);
-            builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
-                public void onClick(DialogInterface dialog, int id) {
-                    dialog.dismiss();
-                    round = input.getText().toString();
-                    //requestSpotWithRound(input.getText().toString());
-                    new AsyncRequestRound().execute();
-                }
-            });
-            builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
-                public void onClick(DialogInterface dialog, int id) {
-                    dialog.dismiss();
-                }
-            });
-            alertDialog = builder.create();
-            alertDialog.show();
-
-            return null;
-        }
-
-
-        @Override
-        protected void onPostExecute(Void result) {
-            super.onPostExecute(result);
-            LoginActivity.currentRound = round;
-            pdLoading.dismiss();
-
         }
 
     }
@@ -461,6 +424,8 @@ public class LoginActivity extends AppCompatActivity implements
     private class AsyncRequestRound extends AsyncTask<Void, Void, Void>
     {
         ProgressDialog pdLoading = new ProgressDialog(LoginActivity.context);
+
+        boolean error = false;
 
         //Task<GoogleSignInAccount> completedTask;
 
@@ -476,9 +441,11 @@ public class LoginActivity extends AppCompatActivity implements
         }
 
         protected Void doInBackground(Void... params) {
-            Looper.prepare();
+            //Looper.prepare();
             HttpClient httpClient = new DefaultHttpClient();
-            HttpGet httpGet = new HttpGet("https://robotics.harker.org/member/scouting/request/"+currentRound);
+            String url = "https://robotics.harker.org/member/scouting/request/"+String.valueOf(currentRound);
+            System.out.println(url);
+            HttpGet httpGet = new HttpGet(url);
             try {
                 HttpResponse response = httpClient.execute(httpGet);
                 int statusCode = response.getStatusLine().getStatusCode();
@@ -493,21 +460,28 @@ public class LoginActivity extends AppCompatActivity implements
                     }
                     JSONObject jsonObject = null;
                     try {
+                        System.out.println(json);
                         jsonObject = new JSONObject(json);
-                        currentTournament = new Tournament(jsonObject.getJSONArray("tournament"));
-                        currentScouting = new Scouting(jsonObject.getJSONArray("scouting"));
-                        if(currentScouting.isSergeant()){
 
+                        LoginActivity.currentTournament = new Tournament(jsonObject.getJSONArray("tournament"));
+                        LoginActivity.currentScouting = new Scouting(jsonObject.getJSONArray("scouting"));
+                        Log.d(TAG, "just passed current scouting");
+                        if(LoginActivity.currentScouting.isSergeant()){
+                            Toast.makeText(LoginActivity.context, "You are a Sergeant!", Toast.LENGTH_SHORT).show();
+                        }else{
+                            Toast.makeText(LoginActivity.context, "You are a Private!", Toast.LENGTH_SHORT).show();
                         }
                     }catch(JSONException joe) {
                         System.out.println("You done messed up David");
                     }
                 }else if(statusCode==404){ //round not valid
                     Toast.makeText(LoginActivity.context, "Round number does not exist", Toast.LENGTH_SHORT).show();
-                    new AsyncRequest().execute();
+                    error = true;
+                    return null;
                 }else if(statusCode==422){ //round is not an integer
                     Toast.makeText(LoginActivity.context, "Round number not valid", Toast.LENGTH_SHORT).show();
-                    new AsyncRequest().execute();
+                    error = true;
+                    return null;
                 }
             }catch(IOException ioe){
                 //suck it up buttercup
@@ -521,8 +495,14 @@ public class LoginActivity extends AppCompatActivity implements
         @Override
         protected void onPostExecute(Void result) {
             super.onPostExecute(result);
-
             pdLoading.dismiss();
+            if(error){
+                requestSpot();
+            }else{
+                Intent toAuton = new Intent(LoginActivity.this,Auton.class);
+                startActivity(toAuton);
+            }
+
 
         }
 
