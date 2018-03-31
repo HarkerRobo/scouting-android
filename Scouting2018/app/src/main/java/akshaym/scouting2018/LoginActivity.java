@@ -1,5 +1,9 @@
 package akshaym.scouting2018;
 
+import android.accounts.AccountManager;
+import android.accounts.AccountManagerFuture;
+import android.accounts.AuthenticatorException;
+import android.accounts.OperationCanceledException;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -10,6 +14,7 @@ import android.os.Looper;
 import android.os.Message;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
+import android.support.annotation.RestrictTo;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.util.JsonReader;
@@ -27,20 +32,26 @@ import com.google.android.gms.auth.api.signin.GoogleSignIn;
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
 import com.google.android.gms.auth.api.signin.GoogleSignInClient;
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
+import com.google.android.gms.common.Scopes;
 import com.google.android.gms.common.SignInButton;
 import com.google.android.gms.common.api.ApiException;
+import com.google.android.gms.common.api.Scope;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 
 
+import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.message.BasicHeader;
 import org.apache.http.message.BasicNameValuePair;
+import org.apache.http.protocol.HTTP;
 import org.apache.http.util.EntityUtils;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -50,8 +61,10 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Activity to demonstrate basic retrieval of the Google user's ID, email address, and basic
@@ -85,6 +98,8 @@ public class LoginActivity extends AppCompatActivity implements
 
      static Scouting currentScouting;
 
+     public static HttpClient httpClient;
+
     EditText input;
 
     @Override
@@ -107,7 +122,9 @@ public class LoginActivity extends AppCompatActivity implements
         // Configure sign-in to request the user's ID, email address, and basic
         // profile. ID and basic profile are included in DEFAULT_SIGN_IN.
         GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                .requestServerAuthCode(getString(R.string.server_client_id))
+                .requestIdToken(getString(R.string.server_client_id))
+                .requestScopes(new Scope(Scopes.PLUS_LOGIN))
+                .requestScopes(new Scope(Scopes.PROFILE))
                 .requestEmail()
                 .build();
         //Toast.makeText(this, getString(R.string.server_client_id), Toast.LENGTH_SHORT).show();
@@ -122,8 +139,10 @@ public class LoginActivity extends AppCompatActivity implements
         currentAccount = GoogleSignIn.getLastSignedInAccount(this);
         updateUI(currentAccount);
         if(currentAccount!=null){
-            Log.d(TAG, "current account recognized");
-            new AsyncGet().execute();
+            if(!getIntent().getBooleanExtra("isFinal", false)) {
+                Log.d(TAG, "current account recognized");
+                new AsyncGet().execute();
+            }
         }else{
             Log.d(TAG, "no current acct");
         }
@@ -274,7 +293,7 @@ public class LoginActivity extends AppCompatActivity implements
             public void onClick(DialogInterface dialog, int id) {
                 dialog.dismiss();
                 currentRound = input.getText().toString();
-                Toast.makeText(LoginActivity.this, currentRound, Toast.LENGTH_SHORT).show();
+                //Toast.makeText(LoginActivity.this, currentRound, Toast.LENGTH_SHORT).show();
                 new AsyncRequestRound().execute();
                 //requestSpotWithRound(input.getText().toString());
             }
@@ -361,10 +380,17 @@ public class LoginActivity extends AppCompatActivity implements
         }
 
         protected Void doInBackground(Void... params) {
-            Looper.prepare();
+            if(Looper.myLooper()==null) {
+                Looper.prepare();
+            }
             if(currentAccount==null) {
                // Toast.makeText(LoginActivity.context, "in handle sign in", Toast.LENGTH_SHORT).show();
-                account = completedTask.getResult();
+                try {
+                    account = completedTask.getResult(ApiException.class);
+                } catch (ApiException e) {
+                    System.out.println("API EXCEPTION");
+                    e.printStackTrace();
+                }
             }else{
                 account = currentAccount;
             }
@@ -379,16 +405,34 @@ public class LoginActivity extends AppCompatActivity implements
             //Toast.makeText(LoginActivity.context, "Welcome, "+studentID+"!", Toast.LENGTH_SHORT ).show();
 
 
-            HttpClient httpClient = new DefaultHttpClient();
+            if(httpClient == null) {
+                httpClient = new DefaultHttpClient();
+            }
             HttpPost httpPost = new HttpPost("https://robotics.harker.org/member/token");
-
             try {
-                List nameValuePairs = new ArrayList(1);
-                nameValuePairs.add(new BasicNameValuePair("android", "true"));
-                nameValuePairs.add(new BasicNameValuePair("idtoken", idToken));
-                System.out.println(nameValuePairs);
-                httpPost.setEntity(new UrlEncodedFormEntity(nameValuePairs));
-                System.out.println(httpPost.getEntity().toString());
+                //List nameValuePairs = new ArrayList(1);
+                //nameValuePairs.add(new BasicNameValuePair("android", "true"));
+                //nameValuePairs.add(new BasicNameValuePair("idtoken", idToken));
+                //System.out.println(nameValuePairs);
+                //UrlEncodedFormEntity blah = new UrlEncodedFormEntity(nameValuePairs, "UTF-8");
+                //System.out.println(nameValuePairs);
+                //System.out.println(blah);
+                /*
+                JSONObject jobject = new JSONObject();
+                try {
+                    jobject.put("idtoken", idToken);
+                    jobject.put("android", true);
+                    System.out.println(jobject.toString(4));
+                }catch(JSONException joe){
+                    System.out.println("error at putting in tokens");
+                }
+                */
+                String value = "idtoken="+idToken;
+
+                StringEntity blah = new StringEntity(value);
+                blah.setContentType("application/x-www-form-urlencoded");
+                httpPost.setHeader(new BasicHeader("X-Requested-With", "XMLHttpRequest"));
+                httpPost.setEntity(blah);
 
                 HttpResponse response = httpClient.execute(httpPost);
                 int statusCode = response.getStatusLine().getStatusCode();
@@ -426,6 +470,8 @@ public class LoginActivity extends AppCompatActivity implements
         ProgressDialog pdLoading = new ProgressDialog(LoginActivity.context);
 
         boolean error = false;
+        boolean full = false;
+        int statusCode;
 
         //Task<GoogleSignInAccount> completedTask;
 
@@ -441,14 +487,41 @@ public class LoginActivity extends AppCompatActivity implements
         }
 
         protected Void doInBackground(Void... params) {
-            //Looper.prepare();
-            HttpClient httpClient = new DefaultHttpClient();
+            if(Looper.myLooper()==null) {
+                Looper.prepare();
+            }
+            if(getIntent().getBooleanExtra("isFinal", false)){
+                //Looper.prepare();
+            }
             String url = "https://robotics.harker.org/member/scouting/request/"+String.valueOf(currentRound);
             System.out.println(url);
             HttpGet httpGet = new HttpGet(url);
+            httpGet.setHeader(new BasicHeader("Content-Type", "application/x-www-form-urlencoded"));
+
+            LoginActivity.currentTournament = new Tournament();
+            LoginActivity.currentScouting = new Scouting();
             try {
                 HttpResponse response = httpClient.execute(httpGet);
-                int statusCode = response.getStatusLine().getStatusCode();
+                statusCode = response.getStatusLine().getStatusCode();
+                System.out.println(statusCode);
+                if(statusCode==409){
+                   full = true;
+                }else if(statusCode==500){
+                    InputStream is = response.getEntity().getContent();
+                    BufferedReader br = new BufferedReader(new InputStreamReader(is, "UTF-8"));
+                    String json = "";
+                    String data = br.readLine();
+                    while(data!=null){
+                        json+=data+"\n";
+                        data = br.readLine();
+                    }
+                    JSONObject jobject = new JSONObject(json);
+                    System.out.println(jobject.toString(4));
+                    String message = jobject.getJSONObject("error").getString("message");
+                    if(message.equals("No spots available")){
+                        full = true;
+                    }
+                }
                 if(statusCode==200){ //means everything's gucci - get the necessary information
                     InputStream is = response.getEntity().getContent();
                     BufferedReader br = new BufferedReader(new InputStreamReader(is, "UTF-8"));
@@ -459,18 +532,28 @@ public class LoginActivity extends AppCompatActivity implements
                         data = br.readLine();
                     }
                     JSONObject jsonObject = null;
+
                     try {
+
                         System.out.println(json);
+
+
                         jsonObject = new JSONObject(json);
 
-                        LoginActivity.currentTournament = new Tournament(jsonObject.getJSONArray("tournament"));
-                        LoginActivity.currentScouting = new Scouting(jsonObject.getJSONArray("scouting"));
+                        System.out.println(jsonObject.toString(4));
+
+                        LoginActivity.currentTournament = new Tournament(jsonObject.getJSONObject("tournament"));
+                        System.out.println(jsonObject.getJSONObject("tournament").toString(4));
+                        LoginActivity.currentScouting = new Scouting(jsonObject.getJSONObject("scouting"));
+                        System.out.println(jsonObject.getJSONObject("scouting").toString(4));
+
                         Log.d(TAG, "just passed current scouting");
                         if(LoginActivity.currentScouting.isSergeant()){
                             Toast.makeText(LoginActivity.context, "You are a Sergeant!", Toast.LENGTH_SHORT).show();
                         }else{
                             Toast.makeText(LoginActivity.context, "You are a Private!", Toast.LENGTH_SHORT).show();
                         }
+                        Toast.makeText(LoginActivity.context, "You are scouting Team# "+currentScouting.getTeamNumber()+" and color "+currentScouting.isBlue(), Toast.LENGTH_LONG).show();
                     }catch(JSONException joe) {
                         System.out.println("You done messed up David");
                     }
@@ -485,7 +568,10 @@ public class LoginActivity extends AppCompatActivity implements
                 }
             }catch(IOException ioe){
                 //suck it up buttercup
+                System.out.println("Input output exception");
                 ioe.printStackTrace();
+            } catch (JSONException e) {
+                e.printStackTrace();
             }
             return null;
         }
@@ -496,16 +582,39 @@ public class LoginActivity extends AppCompatActivity implements
         protected void onPostExecute(Void result) {
             super.onPostExecute(result);
             pdLoading.dismiss();
+            if(statusCode==404){ //round not valid
+                Toast.makeText(LoginActivity.context, "Round number does not exist", Toast.LENGTH_SHORT).show();
+            }else if(statusCode==422){ //round is not an integer
+                Toast.makeText(LoginActivity.context, "Round number not valid", Toast.LENGTH_SHORT).show();
+            }
             if(error){
                 requestSpot();
+                error = false;
             }else{
-                Intent toAuton = new Intent(LoginActivity.this,Auton.class);
-                startActivity(toAuton);
+                if(!full) {
+                    Intent toAuton = new Intent(LoginActivity.this, Auton.class);
+                    if(LoginActivity.currentScouting.isSergeant()){
+                        Toast.makeText(LoginActivity.context, "You are a Sergeant!", Toast.LENGTH_SHORT).show();
+                    }else{
+                        Toast.makeText(LoginActivity.context, "You are a Private!", Toast.LENGTH_SHORT).show();
+                    }
+                    Toast.makeText(LoginActivity.context, "You are scouting Team# "+currentScouting.getTeamNumber()+" and color "+(currentScouting.isBlue()?"Blue":"Red"), Toast.LENGTH_LONG).show();
+                    startActivity(toAuton);
+                }else{
+                    Toast.makeText(LoginActivity.this, "Round is full.\nTry again next round.", Toast.LENGTH_LONG).show();
+                    full = false;
+                }
             }
 
 
         }
 
+    }
+
+    public static String getButtonColor(String name, boolean isBlue, boolean own){
+        return (own?"Home "+name:"Away "+name);
+       // if(!own) isBlue = !isBlue;
+        //return (isBlue ? "Blue "+name: "Red "+name);
     }
 
 

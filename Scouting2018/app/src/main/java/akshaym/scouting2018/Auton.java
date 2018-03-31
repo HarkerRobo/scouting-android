@@ -25,9 +25,14 @@ public class Auton extends AppCompatActivity {
     Button oppSwitch;
     Button vault;
     Button scale;
-    Button pile;
-    Button ownPCubeLine;
-    Button oppPCubeLine;
+    int ownSwitchCount;
+    int oppSwitchCount;
+    int scaleCount;
+    int vaultCount;
+    String ownSwitchBase;
+    String oppSwitchBase;
+    String scaleBase;
+    String vaultBase;
     int redSwitchPos = 1; //0 is red possession, 1 is netural, 2 is blue possession
     int tempRedSwitch = 1;
     int blueSwitchPos = 1; //0 is red possession, 1 is neutral, 2 is blue possession
@@ -36,13 +41,14 @@ public class Auton extends AppCompatActivity {
     int tempScale = 1;
 
     boolean isSergeant;
-    ArrayList<Long> timeStamps;
-    ArrayList<String> list;
+    static public ArrayList<Long> timeStamps;
+    static public ArrayList<String> list;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         currentScouting = LoginActivity.currentScouting;
         currentTournament = LoginActivity.currentTournament;
+        setTitle("Team # "+currentScouting.getTeamNumber()+" Color "+ (currentScouting.isBlue() ? "Blue":"Red"));
 
         if(!currentScouting.isSergeant()) {
             setContentView(R.layout.activity_auton);
@@ -55,15 +61,22 @@ public class Auton extends AppCompatActivity {
         setContentView(R.layout.activity_auton_sergeant);
         isSergeant = true;
         */
+        ((SeekBar) findViewById(R.id.startingposition)).bringToFront();
         list = new ArrayList<String>();
         timeStamps = new ArrayList<Long>();
         Teleop();
         baseline();
+        findViewById(R.id.autonUndo)                                                                                                                                                                                                                                                                                                                                                                                                                                                          .setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                undo();
+            }
+        });
         if(!isSergeant) {
             switches();
             scale();
             vault();
-            pileAndLines();
+           // pileAndLines();
         }else{
             setChangeButtons();
         }
@@ -80,8 +93,8 @@ public class Auton extends AppCompatActivity {
                 int progress = startingPosition.getProgress();
                 toy.putExtra("Starting Position", (progress*2)-100);
                 toy.putExtra("Baseline Crossed", baselineCrossed);
-                toy.putExtra("Auton Timestamps", timeStamps.toArray(new Long[timeStamps.size()]));
-                toy.putExtra("Auton Actions", list);
+               // toy.putExtra("Auton Timestamps", timeStamps.toArray(new Long[timeStamps.size()]));
+               // toy.putExtra("Auton Actions", list);
                // System.out.println(list);
                 startActivity(toy);
             }
@@ -91,11 +104,19 @@ public class Auton extends AppCompatActivity {
     public void switches(){
         ownSwitch = (Button) findViewById(R.id.AutonOwnSwitch);
         oppSwitch = (Button) findViewById(R.id.AutonOppSwitch);
+        ownSwitchBase = LoginActivity.getButtonColor("Switch", currentScouting.isBlue(), true);
+        ownSwitchCount = 0;
+        ownSwitch.setText(ownSwitchBase+": "+ownSwitchCount);
+        oppSwitchBase = LoginActivity.getButtonColor("Switch", currentScouting.isBlue(), false);
+        oppSwitchCount = 0;
+        oppSwitch.setText(oppSwitchBase+": "+oppSwitchCount);
         ownSwitch.setOnClickListener(new View.OnClickListener(){
 
             @Override
             public void onClick(View v) {
                 list.add("0_0_0");
+                ownSwitchCount++;
+                ownSwitch.setText(ownSwitchBase+": "+ (ownSwitchCount));
                 timeStamps.add(System.currentTimeMillis());
             }
         });
@@ -105,6 +126,8 @@ public class Auton extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 list.add("0_0_2");
+                oppSwitchCount++;
+                oppSwitch.setText(oppSwitchBase+": "+oppSwitchCount);
                 timeStamps.add(System.currentTimeMillis());
             }
         });
@@ -112,20 +135,27 @@ public class Auton extends AppCompatActivity {
 
     public void scale(){
         scale = (Button) findViewById(R.id.AutonScale);
+        scaleBase = "Scale";
+        scaleCount = 0;
+        scale.setText(scaleBase+": "+scaleCount);
         scale.setOnClickListener(new View.OnClickListener(){
 
             @Override
             public void onClick(View v) {
                 list.add("0_0_1");
+                scaleCount++;
+                scale.setText(scaleBase+": "+scaleCount);
                 timeStamps.add(System.currentTimeMillis());
             }
         });
     }
-
+/*
     public void pileAndLines(){
         pile = (Button) findViewById(R.id.button4);
         oppPCubeLine = (Button) findViewById(R.id.AutonOtherLine);
         ownPCubeLine = (Button) findViewById(R.id.AutonOwnLine);
+        ownPCubeLine.setText(LoginActivity.getButtonColor("PCube Line", currentScouting.isBlue(), true));
+        oppPCubeLine.setText(LoginActivity.getButtonColor("PCube Line", currentScouting.isBlue(), false));
         pile.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -148,13 +178,18 @@ public class Auton extends AppCompatActivity {
             }
         });
     }
-
+*/
     public void vault(){
         vault = (Button) findViewById(R.id.AutonVault);
+        vaultBase = vault.getText().toString();
+        vaultCount = 0;
+        vault.setText(vaultBase+": "+vaultCount);
         vault.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 list.add("0_0_3");
+                vaultCount++;
+                vault.setText(vaultBase+": "+vaultCount);
                 timeStamps.add(System.currentTimeMillis());
             }
         });
@@ -269,6 +304,30 @@ public class Auton extends AppCompatActivity {
                 alertDialog.show();
             }
         });
+    }
+
+
+    public void undo(){
+        if(list.size()==0||timeStamps.size()==0) return;
+        String action_id = list.remove(list.size()-1);
+        timeStamps.remove(timeStamps.size()-1);
+        if(action_id.equals("0_0_0")){
+            //own switch
+            ownSwitchCount--;
+            ownSwitch.setText(ownSwitchBase+": "+ownSwitchCount);
+        }else if(action_id.equals("0_0_1")){
+            //scale
+            scaleCount--;
+            scale.setText(scaleBase+": "+scaleCount);
+        }else if(action_id.equals("0_0_2")){
+            //away switch
+            oppSwitchCount--;
+            oppSwitch.setText(oppSwitchBase+": "+oppSwitchCount);
+        }else if(action_id.equals("0_0_3")){
+            //vault
+            vaultCount--;
+            vault.setText(vaultBase+": "+vaultCount);
+        }
     }
 
 

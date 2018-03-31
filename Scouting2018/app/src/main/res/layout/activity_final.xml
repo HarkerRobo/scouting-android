@@ -17,16 +17,17 @@
         android:text="Done"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.971"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.948" />
+        app:layout_constraintVertical_bias="0.982" />
 
     <RadioGroup xmlns:android="http://schemas.android.com/apk/res/android"
+        android:id="@+id/radio_lift"
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
-        android:id="@+id/radio_lift"
         android:layout_marginStart="32dp"
-        android:layout_marginTop="56dp"
+        android:layout_marginTop="44dp"
         android:orientation="vertical"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent">
@@ -87,13 +88,29 @@
         android:id="@+id/end_platform"
         android:layout_width="141dp"
         android:layout_height="79dp"
-        android:layout_marginStart="32dp"
-        android:layout_marginTop="292dp"
+        android:layout_marginStart="224dp"
+        android:layout_marginTop="248dp"
         android:text="ToggleButton"
         android:textOff="Didn't End Round on Platform"
         android:textOn="Ended Round on Platform"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
+
+    <EditText
+        android:id="@+id/comments"
+        android:layout_width="248dp"
+        android:layout_height="181dp"
+        android:layout_marginBottom="16dp"
+        android:layout_marginEnd="8dp"
+        android:layout_marginStart="16dp"
+        android:ems="10"
+        android:hint="Comments?"
+        android:inputType="textCapSentences|textMultiLine"
+        android:singleLine="false"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintStart_toStartOf="parent" />
 
 
 </android.support.constraint.ConstraintLayout>

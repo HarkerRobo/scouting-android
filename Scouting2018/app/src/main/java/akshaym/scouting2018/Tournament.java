@@ -2,6 +2,7 @@ package akshaym.scouting2018;
 
 import org.json.JSONArray;
 import org.json.JSONException;
+import org.json.JSONObject;
 
 /**
  * Created by adven on 3/6/2018.
@@ -13,14 +14,22 @@ public class Tournament {
     private String tourneyName;
     private String id;
 
-    public Tournament(JSONArray jsonArray){
+    public Tournament(JSONObject jsonObject){
+
         try {
-            year = jsonArray.getInt(0);
-            tourneyName = jsonArray.getString(1);
-            id = jsonArray.getString(2);
+            System.out.println(jsonObject.toString(4));
+            year = jsonObject.getInt("year");
+            tourneyName = jsonObject.getString("name");
+            id = jsonObject.getString("id");
         }catch(JSONException joe){
             System.out.println("oops");
         }
+    }
+
+    public Tournament(){
+        year = 2018;
+        tourneyName = "Silicon Valley Regional";
+        id = "59b1";
     }
 
     public int getYear() {

@@ -8,6 +8,12 @@ android {
             storeFile file('C:/Users/adven/.android/debug.keystore')
             storePassword 'android'
         }
+        config1 {
+            keyAlias 'key0'
+            keyPassword 'ScoutingKey0'
+            storeFile file('C:/Users/adven/.android/android.jks')
+            storePassword 'Scouting2018'
+        }
     }
     useLibrary 'org.apache.http.legacy'
     compileSdkVersion 26
@@ -23,6 +29,7 @@ android {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.config1
         }
         debug {
             signingConfig signingConfigs.config
