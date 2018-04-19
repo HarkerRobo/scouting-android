@@ -5,13 +5,13 @@ android {
         config {
             keyAlias 'androiddebugkey'
             keyPassword 'android'
-            storeFile file('C:/Users/adven/.android/debug.keystore')
+            storeFile file('C:/Users/21AkshayM/.android/debug.keystore')
             storePassword 'android'
         }
         config1 {
             keyAlias 'key0'
             keyPassword 'ScoutingKey0'
-            storeFile file('C:/Users/adven/.android/android.jks')
+            storeFile file('C:/Users/21AkshayM/.android/android.jks')
             storePassword 'Scouting2018'
         }
     }

@@ -76,8 +76,6 @@ public class LoginActivity extends AppCompatActivity implements
     private static final String TAG = "SignInActivity";
     private static final int RC_SIGN_IN = 9001;
 
-    public static Context context;
-
     GoogleSignInAccount currentAccount = null;
 
     private String studentID;
@@ -107,7 +105,6 @@ public class LoginActivity extends AppCompatActivity implements
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        context = this;
 
         // Views
         mStatusTextView = findViewById(R.id.status);
@@ -122,8 +119,7 @@ public class LoginActivity extends AppCompatActivity implements
         // Configure sign-in to request the user's ID, email address, and basic
         // profile. ID and basic profile are included in DEFAULT_SIGN_IN.
         GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                .requestIdToken(getString(R.string.server_client_id))
-                .requestScopes(new Scope(Scopes.PLUS_LOGIN))
+                .requestIdToken(getString(R.string.server_client_id)) 
                 .requestScopes(new Scope(Scopes.PROFILE))
                 .requestEmail()
                 .build();
@@ -366,7 +362,7 @@ public class LoginActivity extends AppCompatActivity implements
     }
     private class AsyncGet extends AsyncTask<Void, Void, Void>
     {
-        ProgressDialog pdLoading = new ProgressDialog(LoginActivity.context);
+        ProgressDialog pdLoading = new ProgressDialog(LoginActivity.this);
         GoogleSignInAccount account;
 
         @Override
@@ -384,7 +380,7 @@ public class LoginActivity extends AppCompatActivity implements
                 Looper.prepare();
             }
             if(currentAccount==null) {
-               // Toast.makeText(LoginActivity.context, "in handle sign in", Toast.LENGTH_SHORT).show();
+               // Toast.makeText(LoginActivity.this, "in handle sign in", Toast.LENGTH_SHORT).show();
                 try {
                     account = completedTask.getResult(ApiException.class);
                 } catch (ApiException e) {
@@ -396,13 +392,13 @@ public class LoginActivity extends AppCompatActivity implements
             }
             String idToken = account.getIdToken();
             System.out.println(idToken);
-            Toast.makeText(LoginActivity.context, "Welcome, "+account.getDisplayName()+"!", Toast.LENGTH_SHORT).show();
+            Toast.makeText(LoginActivity.this, "Welcome, "+account.getDisplayName()+"!", Toast.LENGTH_SHORT).show();
 
             studentID = account.getEmail().substring(0, account.getEmail().indexOf("@"));
             email = account.getEmail();
             System.out.println(studentID);
 
-            //Toast.makeText(LoginActivity.context, "Welcome, "+studentID+"!", Toast.LENGTH_SHORT ).show();
+            //Toast.makeText(LoginActivity.this, "Welcome, "+studentID+"!", Toast.LENGTH_SHORT ).show();
 
 
             if(httpClient == null) {
@@ -467,7 +463,7 @@ public class LoginActivity extends AppCompatActivity implements
 
     private class AsyncRequestRound extends AsyncTask<Void, Void, Void>
     {
-        ProgressDialog pdLoading = new ProgressDialog(LoginActivity.context);
+        ProgressDialog pdLoading = new ProgressDialog(LoginActivity.this);
 
         boolean error = false;
         boolean full = false;
@@ -549,20 +545,20 @@ public class LoginActivity extends AppCompatActivity implements
 
                         Log.d(TAG, "just passed current scouting");
                         if(LoginActivity.currentScouting.isSergeant()){
-                            Toast.makeText(LoginActivity.context, "You are a Sergeant!", Toast.LENGTH_SHORT).show();
+                            Toast.makeText(LoginActivity.this, "You are a Sergeant!", Toast.LENGTH_SHORT).show();
                         }else{
-                            Toast.makeText(LoginActivity.context, "You are a Private!", Toast.LENGTH_SHORT).show();
+                            Toast.makeText(LoginActivity.this, "You are a Private!", Toast.LENGTH_SHORT).show();
                         }
-                        Toast.makeText(LoginActivity.context, "You are scouting Team# "+currentScouting.getTeamNumber()+" and color "+currentScouting.isBlue(), Toast.LENGTH_LONG).show();
+                        Toast.makeText(LoginActivity.this, "You are scouting Team# "+currentScouting.getTeamNumber()+" and color "+currentScouting.isBlue(), Toast.LENGTH_LONG).show();
                     }catch(JSONException joe) {
                         System.out.println("You done messed up David");
                     }
                 }else if(statusCode==404){ //round not valid
-                    Toast.makeText(LoginActivity.context, "Round number does not exist", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(LoginActivity.this, "Round number does not exist", Toast.LENGTH_SHORT).show();
                     error = true;
                     return null;
                 }else if(statusCode==422){ //round is not an integer
-                    Toast.makeText(LoginActivity.context, "Round number not valid", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(LoginActivity.this, "Round number not valid", Toast.LENGTH_SHORT).show();
                     error = true;
                     return null;
                 }
@@ -583,9 +579,9 @@ public class LoginActivity extends AppCompatActivity implements
             super.onPostExecute(result);
             pdLoading.dismiss();
             if(statusCode==404){ //round not valid
-                Toast.makeText(LoginActivity.context, "Round number does not exist", Toast.LENGTH_SHORT).show();
+                Toast.makeText(LoginActivity.this, "Round number does not exist", Toast.LENGTH_SHORT).show();
             }else if(statusCode==422){ //round is not an integer
-                Toast.makeText(LoginActivity.context, "Round number not valid", Toast.LENGTH_SHORT).show();
+                Toast.makeText(LoginActivity.this, "Round number not valid", Toast.LENGTH_SHORT).show();
             }
             if(error){
                 requestSpot();
@@ -594,11 +590,11 @@ public class LoginActivity extends AppCompatActivity implements
                 if(!full) {
                     Intent toAuton = new Intent(LoginActivity.this, Auton.class);
                     if(LoginActivity.currentScouting.isSergeant()){
-                        Toast.makeText(LoginActivity.context, "You are a Sergeant!", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(LoginActivity.this, "You are a Sergeant!", Toast.LENGTH_SHORT).show();
                     }else{
-                        Toast.makeText(LoginActivity.context, "You are a Private!", Toast.LENGTH_SHORT).show();
+                        //Toast.makeText(LoginActivity.this, "You are a Private!", Toast.LENGTH_SHORT).show();
                     }
-                    Toast.makeText(LoginActivity.context, "You are scouting Team# "+currentScouting.getTeamNumber()+" and color "+(currentScouting.isBlue()?"Blue":"Red"), Toast.LENGTH_LONG).show();
+                    Toast.makeText(LoginActivity.this, "You are scouting Team# "+currentScouting.getTeamNumber()+" and color "+(currentScouting.isBlue()?"Blue":"Red"), Toast.LENGTH_LONG).show();
                     startActivity(toAuton);
                 }else{
                     Toast.makeText(LoginActivity.this, "Round is full.\nTry again next round.", Toast.LENGTH_LONG).show();
